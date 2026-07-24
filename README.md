@@ -75,10 +75,27 @@ Arithmetic Error: Result of '*' operation overflowed integer bounds!!
 
 ## Running
 
+1. Clone the repo, then `cd` into its `dist` folder:
+```
+git clone https://github.com/davisroman456/Mini-Integer-Programming-Language.git
+cd Mini_Integer_Programming_Language/dist
+```
+2. Run the jar:
 ```
 java -jar Mini_Integer_Programming_Language.jar
 ```
+Type statements one per line. Type `QUIT` to exit, or send EOF (`Ctrl+Z` then Enter on Windows,
+`Ctrl+D` on Unix) to end the session.
 
+## A Note on Process
+
+The recursive descent parser used here wasn't my first approach. I originally built precedence
+handling myself with a three-pass system — folding unary minus, then `* / %`, then `+ -`, over
+a flat list of nodes — before learning that recursive descent was the more standard technique.
+Working out that first version from scratch is what taught me *why* precedence has to be enforced
+structurally in the first place, and I think that groundwork is what made the "proper" approach
+click as fast as it did once I got there. For reference, the original three-pass implementation is
+preserved as a large comment block in `Parser.java`, above the current `parseExpression` methods.
 Type statements one per line. Type `QUIT` to exit, or send EOF (`Ctrl+Z` then Enter on Windows,
 `Ctrl+D` on Unix) to end the session.
 
