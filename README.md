@@ -75,6 +75,9 @@ Arithmetic Error: Result of '*' operation overflowed integer bounds!!
 
 ## Running
 
+**Requires Java 21 or later — the code uses modern switch expressions (`->` and `yield`), which
+aren't supported in older Java versions.**
+
 1. Clone the repo, then `cd` into its `dist` folder:
 ```
 git clone https://github.com/davisroman456/Mini-Integer-Programming-Language.git
