@@ -1,5 +1,7 @@
 # Mini Integer Programming Language
 
+Inspired by a similar project by [@amarti71](https://github.com/amarti71).
+
 A line-by-line integer programming language built with a custom tokenizer, a recursive descent
 parser, and an abstract syntax tree (AST) based interpreter. Supports variable assignment,
 arithmetic with proper PEMDAS-based operator precedence, and PRINT statements. Invalid or
