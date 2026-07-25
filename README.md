@@ -99,10 +99,7 @@ handling myself with a three-pass system — folding unary minus, then `* / %`, 
 a flat list of nodes — before learning that recursive descent was the more standard technique.
 Working out that first version from scratch is what taught me *why* precedence has to be enforced
 structurally in the first place, and I think that groundwork is what made the "proper" approach
-click as fast as it did once I got there. For reference, the original three-pass implementation is
-preserved as a large comment block in `Parser.java`, above the current `parseExpression` methods.
-Type statements one per line. Type `QUIT` to exit, or send EOF (`Ctrl+Z` then Enter on Windows,
-`Ctrl+D` on Unix) to end the session.
+click as fast as it did once I got there. For reference, the original three-pass implementation is preserved as a large comment block in `Parser.java`, above the current `parseExpression` methods.
 
 ## Author
 
