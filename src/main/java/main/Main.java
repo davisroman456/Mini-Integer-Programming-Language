@@ -16,7 +16,7 @@ import tokenizer.Tokenizer;
  *  allowing the session to continue until the user issues QUIT or input ends.
  *  
  *  Date started: July 17, 2026. Date of completion: July 20, 2026.
- *  Major Update: November 19, 2026 (Parentheses, Brackets, Exponentiation, and HELP/CLEAR keywords).
+ *  Major Update: November 20, 2026 (Parentheses & Brackets, Exponentiation, HELP & CLEAR keyword, and text colors).
  *  @author Roman Davis
  *  @version 2.0
  * */
