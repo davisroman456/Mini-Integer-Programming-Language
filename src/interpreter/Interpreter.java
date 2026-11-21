@@ -21,7 +21,7 @@ public class Interpreter {
 	 */
 	public static int getVariableVal(String variableName) {
 		if(!variables.containsKey(variableName)) { //
-			throw new LanguageException("Retrieval Error: \"" + variableName + "\" does not exist!!");
+			throw new LanguageException("Retrieval Error: \"" + variableName + "\" does not exist.");
 		}
 		return variables.get(variableName);
 	}
@@ -43,6 +43,19 @@ public class Interpreter {
 	 */
 	public static void evaluateNode(Node node) {
 		node.evaluate();
+	}
+	/**
+	 * Removes all of the mappings in the variables hash map. Essentially clearing the memory.
+	 * */
+	public static void clearVariables() {
+		variables.clear();
+	}
+	
+	/**
+	 * Returns whether the 'variables' hash map is empty or not
+	 * */
+	public static boolean isVariablesEmpty() {
+		return variables.isEmpty();
 	}
 
 }
