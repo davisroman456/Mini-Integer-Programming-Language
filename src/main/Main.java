@@ -3,6 +3,7 @@ package main;
 import java.util.Scanner;
 
 import exception.LanguageException;
+import interpreter.Interpreter;
 import parser.Parser;
 import tokenizer.Tokenizer;
 
@@ -15,42 +16,75 @@ import tokenizer.Tokenizer;
  *  allowing the session to continue until the user issues QUIT or input ends.
  *  
  *  Date started: July 17, 2026. Date of completion: July 20, 2026.
+ *  Major Update: November 19, 2026 (Parentheses, Brackets, Exponentiation, and HELP/CLEAR keywords).
  *  @author Roman Davis
- *  @version 1.0
+ *  @version 2.0
  * */
 public class Main {
 
 	public static void main(String[] args) {
 		Scanner input = new Scanner(System.in);
-		System.out.println("- - - - - - - - - - - - - - - - Mini Integer Language - - - - - - - - - - - - - - - - -");
-		System.out.println("Operators : +, -, *, /, %  (This language does not have functionality for parentheses)*");
-		System.out.println("Keyword(s): PRINT,         (Displays the result of the expression)");
-		System.out.println("            QUIT           (Quits application)");
-		System.out.println("Example lines:");
-		System.out.println("	x = 4 + 9 * 2");
-		System.out.println("	y = -2");
-		System.out.println("	PRINT x + y");
-		System.out.println("	>>> 20");
-		System.out.println("	QUIT");
-		System.out.println("=======================================================================================\n");
+		printHelp(); 
 		boolean quitApp = false;
 		while(!quitApp && input.hasNextLine()){
 			try {
 				String statement = input.nextLine();
-				if(statement.equals("QUIT"))
+				if(statement.trim().equals("QUIT"))
 					quitApp = true;
+				else if(statement.trim().equals("HELP"))
+					printHelp();
+				else if(statement.trim().equals("CLEAR")) {
+					clearScreen();
+					if(!Interpreter.isVariablesEmpty())
+						Interpreter.clearVariables();
+				}
 				else
 					Parser.parse(Tokenizer.tokenize(statement));
 			}catch(LanguageException le) {
 				System.err.println(le.getMessage());
 			}catch(IllegalStateException e) {
-				System.out.println(e.getMessage());
+				System.err.println(e.getMessage());
 			}
 		}
 	
 		input.close();
 		// End of program
+	}
+	
+	/**
+	 * Displays a guide on how to use the program
+	 * */
+	public static void printHelp() {
+		System.out.println("""
+		        +======================================== HELP =========================================+
+		        |Operators          : + (Addition),                                                     |
+		        |                     - (Subtraction),                                                  |
+		        |                     * (Multiplication),                                               |
+		        |                     / (Integer Division),                                             |
+		        |                     % (Modulo),                                                       |
+		        |                     ^ (Exponentiation)                                                |
+		        |Expression Grouping: (), []                                                            |
+		        |Keywords           : PRINT, (Displays the result of the expression)                    |
+		        |                     HELP,  (Displays Operators, Keywords, and Example lines)          |
+		        |                     CLEAR, (Clears the standard output and memory)                    |
+		        |                     QUIT   (Quits application)                                        |
+		        |Example lines:                                                                         |
+		        |   x = (4 + 9) * 2                                                                     |
+		        |   y = -2                                                                              |
+		        |   PRINT x + y                                                                         |
+		        |   >>> 24                                                                              |
+		        |   QUIT                                                                                |
+		        +=======================================================================================+\n""");
 
 	}
+	
+	/**
+	 * Clears the screen by calling ANSI code and flushing output stream
+	 * */
+	public static void clearScreen() {
+	    System.out.print("\033[H\033[2J");
+	    System.out.flush();
+	}
+
 
 }

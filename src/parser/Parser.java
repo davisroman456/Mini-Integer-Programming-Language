@@ -8,12 +8,15 @@ import tokenizer.*;
 /**
  * Parses a tokenized statement into an executable abstract syntax tree and immediately evaluates it.
  * Supports two statement forms: assignment ({@code identifier = expression}) and printing
- * ({@code PRINT expression}). Expression parsing uses recursive descent, with one method per
- * precedence level, so operator precedence (unary minus, then * / %, then + -) falls naturally out
- * of the call structure rather than being enforced by repeated passes over a flat list.
+ * ({@code PRINT expression}). Expression parsing uses Pratt parsing.
+ *  @see <a href="https://martin.janiczek.cz/2023/07/03/demystifying-pratt-parsers.html">Demystifying Pratt Parsers</a>
+ *      by Martin Janiczek.
  */
 public class Parser {
-
+	/** Minimum binding power for the operand of a unary minus: above {@code * / %} (20), at or below {@code ^} (30). */
+	private static final int PREFIX_POWER = 25;
+	
+	
 	/**
 	 * Entry point for parsing a single tokenized statement. Scans for ERROR tokens first to fail
 	 * fast on invalid input, then dispatches to either assignment or print parsing based on the
@@ -45,163 +48,14 @@ public class Parser {
 			Interpreter.evaluateNode(parseAssignment(tokens));
 			
 		} else { // Just simply an invalid statement
-			throw new LanguageException("Statement Error: Invalid statement!! (Proper statements e.g. \"x = 9 + 3\", \"PRINT x - 10\"");
+			throw new LanguageException("Statement Error: Invalid statement. (Proper statements e.g. \"x = 9 + 3\", \"PRINT x - 10\")");
 		}
 		
 	}
-	/*
-	 * ORIGINAL STRATEGY (kept for reference) — three-pass reduction over a flat ArrayList of nodes.
-	 * This was my first working solution and is what taught me how operator precedence actually
-	 * gets enforced structurally (unary minus, then * / %, then + -, each pass folding the list
-	 * down further). It works correctly, but I moved off of it for a few reasons:
-	 *
-	 * 1. Big-O: each pass is O(n), and there are 3 fixed passes, but every fold/remove shifts the
-	 *    ArrayList, so in the worst case (long chains of the same precedence level) this behaves
-	 *    closer to O(n^2) than O(n) as the statement grows, since remove() on an ArrayList is O(n)
-	 *    itself and happens repeatedly inside each pass.
-	 * 2. It doesn't extend well. Adding a new precedence level (or parentheses) means adding another
-	 *    whole pass and more index-shifting logic, rather than just adding one more method to a chain.
-	 * 3. Mutating a shared list in place while iterating over it (with manual i-- compensation) is
-	 *    fragile and hard to reason about/debug compared to structured recursive calls.
-	 *
-	 * Replaced below with a recursive descent parser (Expression -> Term -> Factor), which walks the
-	 * token list once, left to right, with precedence falling naturally out of the call structure
-	 * instead of being enforced via repeated passes.
-	 */
-	/*
-	private static Node parseExpression(ArrayList<Token> tokens) {
-		// 1st. create node relation ship for an integer or variable preceded by a minus symbol (negative). Make binaryNode: op = '*', left = -1, right = node.value
-		// x = -1 + 5 * 2 - 8  IDENTIFIER(x) EQUALS(=) MINUS(-) NUMBER(1) PLUS(+) NUMBER(5) MULTIPLY(*) NUMBER(2) MINUS(-) NUMBER(8)*
-		ArrayList<Node> astNodes = new ArrayList<>(tokens.size()); // tokens past '=' or "PRINT"
-		// Create specific nodes based on token type and keep references null for now
-		Iterator<Token> tokenIterator = tokens.iterator();
-		
-		while(tokenIterator.hasNext()){ // Populate linked list with unreferenced nodes
-			Token tempToken = tokenIterator.next();
-			switch(tempToken.getTokenType()){
-			case IDENTIFIER:
-				astNodes.add(new VariableNode(tempToken.getValue()));
-				break;
-			case NUMBER:
-				astNodes.add(new IntegerNode(Integer.parseInt(tempToken.getValue())));
-				break;
-			case PLUS:
-				astNodes.add(new BinaryNode('+', null, null));
-				break;
-			case MINUS: // Keep in mind of negative unary-minus numbers
-				astNodes.add(new BinaryNode('-', null, null));
-				break;
-			case MULTIPLY:
-				astNodes.add(new BinaryNode('*', null, null));
-				break;
-			case DIVIDE:
-				astNodes.add(new BinaryNode('/', null, null));
-				break;
-			case MODULO:
-				astNodes.add(new BinaryNode('%', null, null));
-				break;
-			default:
-				throw new LanguageException("Expression Error: Incompatible token encountered in the expression!!");
-			}
-		}
-		// Loop once for unary minus
-		for(int i = 0; i < astNodes.size(); i++) {
-			Node tempNode = astNodes.get(i);
-			if(tempNode instanceof BinaryNode) {
-				BinaryNode tempBinaryNode = (BinaryNode) tempNode;
-				if(tempBinaryNode.getOperator() == '-') {
-					if(i != 0 && i != astNodes.size() - 1) {
-						Node leftNode = astNodes.get(i-1);
-						Node rightNode = astNodes.get(i+1);
-						if(!(leftNode instanceof IntegerNode || leftNode instanceof VariableNode) &&
-						  (rightNode instanceof IntegerNode || rightNode instanceof VariableNode)) {
-							tempBinaryNode.setOperator('*');
-							tempBinaryNode.setLeft(new IntegerNode(-1));
-							tempBinaryNode.setRight(rightNode);
-							astNodes.remove(i + 1);
-						}
-					}else if(i == 0 && i != astNodes.size() - 1) {
-						Node rightNode = astNodes.get(i+1);
-						if(rightNode instanceof IntegerNode || rightNode instanceof VariableNode) {
-							tempBinaryNode.setOperator('*');
-							tempBinaryNode.setLeft(new IntegerNode(-1));
-							tempBinaryNode.setRight(rightNode);
-							astNodes.remove(i + 1);
-						}
-					}
-					
-				}
-			}
-		} // End of first parse loop
-		
-		// Loop twice for Multiplication, Division, and Modulo
-		for(int i = 0; i < astNodes.size(); i++) {
-			Node tempNode = astNodes.get(i);
-			if(tempNode instanceof BinaryNode) {
-				BinaryNode tempBinaryNode = (BinaryNode) tempNode;
-				char operator = tempBinaryNode.getOperator();
-				if(i != 0 && i != astNodes.size() - 1) {
-					if(operator == '*' || operator == '/' || operator == '%') {
-						Node leftNode = astNodes.get(i-1);
-						Node rightNode = astNodes.get(i+1);
-						if(isOperand(leftNode) && isOperand(rightNode)) {
-							tempBinaryNode.setLeft(leftNode);
-							tempBinaryNode.setRight(rightNode);
-							astNodes.remove(i + 1);
-							astNodes.remove(i - 1);
-							i--; // Since element left of current Node is removed, list shifts down. Index tracker has to shift down to compensate
-						}
-					}
-				}
-			}
-		} // End of second parse loop
-		
-		// Loop thrice for Addition and Subtraction
-		for(int i = 0; i < astNodes.size(); i++) {
-			Node tempNode = astNodes.get(i);
-			if(tempNode instanceof BinaryNode) {
-				BinaryNode tempBinaryNode = (BinaryNode) tempNode;
-				char operator = tempBinaryNode.getOperator();
-				if(i != 0 && i != astNodes.size() - 1) {
-					if(operator == '+' || operator == '-') {
-						Node leftNode = astNodes.get(i-1);
-						Node rightNode = astNodes.get(i+1);
-						if(isOperand(leftNode) && isOperand(rightNode)) {
-							tempBinaryNode.setLeft(leftNode);
-							tempBinaryNode.setRight(rightNode);
-							astNodes.remove(i + 1);
-							astNodes.remove(i - 1);
-							i--; // Since element left of current Node is removed, list shifts down. Index tracker has to shift down to compensate
-						}
-					}
-				}
-			}
-		} // End of third parse loop
-		
-		// Should be a single node remaining
-		if(astNodes.size() == 1)
-			return astNodes.getFirst();
-		else
-			throw new LanguageException("Expression Error: Could not completely parse expression.");
-	}
 	
-	
-	private static boolean isOperand(Node node) {
-	    return node instanceof IntegerNode || node instanceof VariableNode || node instanceof BinaryNode;
-	}
-	*/
-	
-	// NEW STRATEGY: recursive descent, one method per precedence level.
-	// Grammar (lowest to highest precedence):
-	//   expression := term (('+' | '-') term)*
-	//   term       := factor (('*' | '/' | '%') factor)*
-	//   factor     := NUMBER | IDENTIFIER | '-' factor
-	// 'pos' is a single-element array acting as a mutable cursor into 'tokens',
-	// since Java can't pass a primitive int by reference.
-
 	/**
-	 * Parses a full arithmetic expression starting at the beginning of {@code tokens}, and verifies
-	 * every token was consumed (catching cases like a trailing operator, e.g. {@code "x = 5 +"}).
+	 * Parses a full expression starting at the beginning of {@code tokens} and verifies every token
+	 * was consumed, which catches a stray closer (e.g. {@code "x = 2 + 3)"}).
 	 *
 	 * @param tokens the tokens making up the expression
 	 * @return the root node of the resulting expression tree
@@ -209,109 +63,146 @@ public class Parser {
 	 */
 	private static Node parseExpression(ArrayList<Token> tokens) {
 		int[] pos = { 0 };
-		Node result = parseExpression(tokens, pos);
+		Node result = parseExpr(tokens, pos, 0); // 
 		if(pos[0] != tokens.size())
 			throw new LanguageException("Expression Error: Unexpected token encountered after parsing expression.");
 		return result;
 	}
-
+	
 	/**
-	 * Grammar rule: {@code expression := term (('+' | '-') term)*}.
-	 * Parses one or more terms combined by addition/subtraction, left-associatively.
+	 * Core of the Pratt parser. Parses one prefix expression, then keeps folding in infix operators
+	 * while their binding power is at least {@code minPower}. A recursive call with a higher
+	 * {@code minPower} stops the right operand sooner (left associativity), while passing the
+	 * operator's own power lets the same operator continue on the right (right associativity, used by
+	 * {@code ^}). Non-operators such as {@code )} and {@code ]} have a binding power of -1, so the loop
+	 * stops at them and leaves them for the caller to check.
 	 *
 	 * @param tokens the full token list being parsed
-	 * @param pos single-element cursor tracking the current position in {@code tokens}, advanced
-	 *        as tokens are consumed (Java has no pass-by-reference for primitives, so this array
-	 *        is the shared mutable cursor across all three grammar-level methods)
-	 * @return the node representing this expression
+	 * @param pos single-element cursor holding the index of the next unconsumed token, advanced as tokens are consumed
+	 * @param minPower the lowest binding power this call may consume; the top-level call uses 0
+	 * @return the root node of the expression parsed at this level
+	 * @throws exception.LanguageException if the expression is malformed
 	 */
-	private static Node parseExpression(ArrayList<Token> tokens, int[] pos) {
-		Node left = parseTerm(tokens, pos);
-		while(pos[0] < tokens.size() &&
-			(tokens.get(pos[0]).getTokenType() == TokenType.PLUS || tokens.get(pos[0]).getTokenType() == TokenType.MINUS)) {
-			char operator = switch(tokens.get(pos[0]).getTokenType()) {
-			    case PLUS -> '+';
-			    default -> '-';
-			};
-			pos[0]++;
-			Node right = parseTerm(tokens, pos);
-			left = new BinaryNode(operator, left, right);
+	private static Node parseExpr(ArrayList<Token> tokens, int[] pos, int minPower) {
+		Node left = parsePrefix(tokens, pos);
+
+		while(pos[0] < tokens.size()) {
+			TokenType opType = tokens.get(pos[0]).getTokenType(); // peek at the NEXT unconsumed token
+			int power = bindingPower(opType);
+
+			if(power < minPower) // not an operator (-1) or binds too loosely for this call
+				break;
+
+			pos[0]++; // consume the operator
+			int rightPower = (opType == TokenType.CARET) ? power : power + 1; // right-assoc ^, left-assoc the rest
+			Node right = parseExpr(tokens, pos, rightPower);
+			left = new BinaryNode(operatorChar(opType), left, right);
 		}
 		return left;
 	}
-
+	
 	/**
-	 * Grammar rule: {@code term := factor (('*' | '/' | '%') factor)*}.
-	 * Parses one or more factors combined by multiplication/division/modulo, left-associatively.
-	 * Called from {@link #parseExpression(ArrayList, int[])} so that these operators always end up
-	 * nested more deeply in the tree than + or -, giving them higher evaluation precedence.
+	 * Converts an infix operator token type into the operator character a {@link BinaryNode} stores.
 	 *
-	 * @param tokens the full token list being parsed
-	 * @param pos shared cursor into {@code tokens}
-	 * @return the node representing this term
+	 * @param type the operator token type
+	 * @return the matching operator character
+	 * @throws exception.LanguageException if {@code type} is not an infix operator
 	 */
-	private static Node parseTerm(ArrayList<Token> tokens, int[] pos) {
-		Node left = parseFactor(tokens, pos);
-		while(pos[0] < tokens.size() &&
-			(tokens.get(pos[0]).getTokenType() == TokenType.MULTIPLY ||
-			 tokens.get(pos[0]).getTokenType() == TokenType.DIVIDE ||
-			 tokens.get(pos[0]).getTokenType() == TokenType.MODULO)) {
-			TokenType type = tokens.get(pos[0]).getTokenType();
-			char operator = switch(type) {
-			    case MULTIPLY -> '*';
-			    case DIVIDE -> '/';
-			    default -> '%';
-			};
-			pos[0]++;
-			Node right = parseFactor(tokens, pos);
-			left = new BinaryNode(operator, left, right);
+	private static char operatorChar(TokenType type) {
+		switch(type) {
+		case PLUS:
+			return '+';
+		case MINUS:
+			return '-';
+		case MULTIPLY:
+			return '*';
+		case DIVIDE:
+			return '/';
+		case MODULO:
+			return '%';
+		case CARET:
+			return '^';
+		default:
+			throw new LanguageException();
+		
 		}
-		return left;
+		
 	}
-
+	
 	/**
-	 * Grammar rule: {@code factor := NUMBER | IDENTIFIER | '-' factor}.
-	 * The base case of the recursive descent: parses a single number or variable, or a unary minus
-	 * applied to another factor (handled recursively, so chained negatives like {@code "--5"} work
-	 * without special-casing).
+	 * Returns binding power of a token type, if else, return '-1'.
+	 *
+	 * @param type - the token type.
+	 * @return Integer of the binding power of a particular token type.
+	 */
+	private static int bindingPower(TokenType type) {
+		switch(type) {
+		case PLUS, MINUS:
+			return 10;
+		case MULTIPLY, DIVIDE, MODULO:
+			return 20;
+		case CARET:
+			return 30;
+		default:
+			return -1;
+		}
+	}
+	
+	/**
+	 * Parses whatever can start an expression: a number, a variable, a unary minus, or a grouped
+	 * expression in {@code ()} or {@code []}. A closing bracket can never start an expression, so
+	 * it falls through to the error case.
 	 *
 	 * @param tokens the full token list being parsed
 	 * @param pos shared cursor into {@code tokens}
-	 * @return the node representing this factor
-	 * @throws exception.LanguageException if the current token isn't a number, identifier, or minus
+	 * @return the node for this prefix expression
+	 * @throws exception.LanguageException if no tokens remain, the token cannot start an expression,
+	 *         an integer literal is out of range, or a group is missing or has a mismatched closer
 	 */
-	private static Node parseFactor(ArrayList<Token> tokens, int[] pos) {
+	private static Node parsePrefix(ArrayList<Token> tokens, int[] pos) {
 		if(pos[0] >= tokens.size())
 			throw new LanguageException("Expression Error: Expected a number, variable, or '-' but reached end of statement.");
 
 		Token token = tokens.get(pos[0]);
 		switch(token.getTokenType()) {
-		case MINUS:
+		case LPAREN:
+		case LBRACKET: {
+			pos[0]++; // consume the opener
+			Node inner = parseExpr(tokens, pos, 0); // fresh expression inside the group
+			TokenType closer = (token.getTokenType() == TokenType.LPAREN) ? TokenType.RPAREN : TokenType.RBRACKET;
+			if(pos[0] >= tokens.size() || tokens.get(pos[0]).getTokenType() != closer)
+				throw new LanguageException("Expression Error: Missing or mismatched closing bracket, expected '"
+						+ (closer == TokenType.RPAREN ? ")" : "]") + "'.");
+			pos[0]++; // consume the closer
+			return inner;
+		}
+		case MINUS: {
 			pos[0]++;
-			Node operand = parseFactor(tokens, pos); // unary minus, handles chained negatives like "--5" too
+			Node operand = parseExpr(tokens, pos, PREFIX_POWER);
 			return new BinaryNode('*', new IntegerNode(-1), operand);
+		}
 		case NUMBER:
 			pos[0]++;
 			int numVal;
 			try {
 				numVal = Integer.parseInt(token.getValue());
 			}catch(NumberFormatException e) {
-				throw new LanguageException("Statement Error: Integer Overflow Error or could not parse integer!!");
+				throw new LanguageException("Statement Error: Integer Overflow Error or could not parse integer.");
 			}
 			return new IntegerNode(numVal);
 		case IDENTIFIER:
 			pos[0]++;
 			return new VariableNode(token.getValue());
 		default:
-			throw new LanguageException("Expression Error: Expected a number, variable, or '-' but found incompatible token!!");
+			throw new LanguageException("Expression Error: Expected a number, variable, '-', or an opening bracket but found incompatible token.");
 		}
 	}
 	
 	/**
 	 * Strips the leading PRINT token and parses the remainder as an expression to print.
 	 *
-	 * @param tokens the tokens of a PRINT statement, PRINT token still included at index 0
-	 * @return a PrintNode wrapping the parsed expression
+	 * @param tokens - the tokens of a PRINT statement, PRINT token still included at index 0
+	 * @return PrintNode wrapping the parsed expression
 	 * @throws exception.LanguageException if no expression follows PRINT
 	 */
 	private static PrintNode parsePrint(ArrayList<Token> tokens) {
@@ -326,13 +217,13 @@ public class Parser {
 	 * Parses an assignment statement of the form {@code identifier = expression}.
 	 *
 	 * @param tokens the tokens of an assignment statement, identifier and EQUALS still included
-	 * @return an AssignmentNode wrapping the target variable and parsed expression
+	 * @return AssignmentNode wrapping the target variable and parsed expression
 	 * @throws exception.LanguageException if the first token isn't an identifier or no expression follows
 	 */
 	private static AssignmentNode parseAssignment(ArrayList<Token> tokens) {
 		Token variableToken = tokens.removeFirst(); // Remove but also save it when returning AssignmentNode
 		if(variableToken.getTokenType() != TokenType.IDENTIFIER)
-			throw new LanguageException("Assignment Error: Can not assign to a non-variable type!!");
+			throw new LanguageException("Assignment Error: Can not assign to a non-variable type.");
 		tokens.removeFirst(); // Do it again to leave just the expression
 		if(tokens.isEmpty())
 			throw new LanguageException("Expression Error: Missing expression.");

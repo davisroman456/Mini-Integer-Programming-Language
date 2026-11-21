@@ -1,13 +1,16 @@
 package tokenizer;
 
 import java.util.ArrayList;
+import java.util.Set;
 
 import exception.LanguageException;
 
 public class Tokenizer {
 	
+	public static final Set<String> RESERVED_WORDS = Set.of("PRINT", "HELP", "CLEAR", "QUIT");
+	
 	/** 
-	 * Method seeks to tokenize a statement into an ArrayList for interpreting.
+	 * Method seeks to tokenize a statement into an ArrayList for parsing and interpretation.
 	 * The method properly goes through a statement that was input and breaks it down into tokens to be parsed.
 	 * 
 	 * @param statement - A statement, of type 'String', that will be tokenized
@@ -35,9 +38,10 @@ public class Tokenizer {
 					
 					if(tokenString.equals("PRINT")) // If this identifier matches the "PRINT" keyword, create "PRINT" type token instead of "IDENTIFIER"
 						token = new Token(TokenType.PRINT, "PRINT");
+					else if(RESERVED_WORDS.contains(tokenString))
+						throw new LanguageException("Statement Error: Reserved word \""+ tokenString +"\" can't be used inside a statement.");
 					else
 						token = new Token(TokenType.IDENTIFIER, tokenString);
-					
 				} else if(isDigit(statement, scanIndx)){ // If it starts with a digit it is an "NUMBER"
 					int startIndx = scanIndx;
 					do {
@@ -68,6 +72,26 @@ public class Tokenizer {
 					scanIndx++;
 					token = new Token(TokenType.MODULO, "%");
 					
+				} else if(currCharacter.equals("^")) { // Add "CARET" token
+					scanIndx++;
+					token = new Token(TokenType.CARET, "^");
+					
+				} else if(currCharacter.equals("(")) { // Add "LPAREN" token
+					scanIndx++;
+					token = new Token(TokenType.LPAREN, "(");
+					
+				} else if(currCharacter.equals(")")) { // Add "RPAREN" token
+					scanIndx++;
+					token = new Token(TokenType.RPAREN, ")");
+					
+				} else if(currCharacter.equals("[")) { // Add "LBRACKET" token
+					scanIndx++;
+					token = new Token(TokenType.LBRACKET, "[");
+					
+				} else if(currCharacter.equals("]")) { // Add "RBRACKET" token
+					scanIndx++;
+					token = new Token(TokenType.RBRACKET, "]");
+					
 				} else if(currCharacter.equals("=")) { // Add "EQUALS" token
 					scanIndx++;
 					token = new Token(TokenType.EQUALS, "=");
@@ -94,7 +118,7 @@ public class Tokenizer {
 				}
 			} // While loop end
 		}else {
-			throw new LanguageException("Statement Error: Statement must be either a PRINT statement or assignment statement AND statement must not begin with an invalid character!!");
+			throw new LanguageException("Statement Error: Statement must be either a PRINT statement or assignment statement AND statement must not begin with an invalid character.");
 		}
 		
 		return tokens;
@@ -162,6 +186,16 @@ public class Tokenizer {
 			case '/': isArithOp = true;
 					break;
 			case '%': isArithOp = true;
+					break;
+			case '^': isArithOp = true;
+					break;
+			case '(': isArithOp = true;
+					break;
+			case ')': isArithOp = true;
+					break;
+			case '[': isArithOp = true;
+					break;
+			case ']': isArithOp = true;
 					break;
 			case '=': isArithOp = true;
 					break;

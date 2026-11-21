@@ -16,6 +16,16 @@ public enum TokenType {
 	DIVIDE,
 	/** The {@code %} operator. */
 	MODULO,
+	/** The {@code ^} operator. Represents exponentiation.*/
+	CARET,
+	/** The {@code (} operator. Pairs with RPAREN ')'.*/
+	LPAREN,
+	/** The {@code )} operator. Pairs with LPAREN '('.*/
+	RPAREN,
+	/** The {@code [} operator. Pairs with RBRACKET ']'.*/
+	LBRACKET,
+	/** The {@code ]} operator. Pairs with LBRACKET '['.*/
+	RBRACKET,
 	/** The {@code =} assignment operator. */
 	EQUALS,
 	/** The {@code PRINT} keyword. */

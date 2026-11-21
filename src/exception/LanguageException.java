@@ -10,7 +10,7 @@ public class LanguageException extends RuntimeException {
 
 	public LanguageException() {
 		// TODO Auto-generated constructor stub
-		super("Statement Error: Issue found when tokenizing or parsing statement!!");
+		super("Statement Error: Issue found when tokenizing or parsing statement.");
 	}
 
 	public LanguageException(String message) {
