@@ -26,7 +26,10 @@ public class Main {
 		Scanner input = new Scanner(System.in);
 		printHelp(); 
 		boolean quitApp = false;
-		while(!quitApp && input.hasNextLine()){
+		while(!quitApp){
+			System.out.print("> ");
+			if(!input.hasNextLine())
+				break; // End of input, no more statements
 			try {
 				String statement = input.nextLine();
 				if(statement.trim().equals("QUIT"))
@@ -66,7 +69,7 @@ public class Main {
 		        |Expression Grouping: (), []                                                            |
 		        |Keywords           : PRINT, (Displays the result of the expression)                    |
 		        |                     HELP,  (Displays Operators, Keywords, and Example lines)          |
-		        |                     CLEAR, (Clears the standard output and memory)                    |
+		        |                     CLEAR, (Clears the visible screen and memory)                     |
 		        |                     QUIT   (Quits application)                                        |
 		        |Example lines:                                                                         |
 		        |   x = (4 + 9) * 2                                                                     |
@@ -79,10 +82,13 @@ public class Main {
 	}
 	
 	/**
-	 * Clears the screen by calling ANSI code and flushing output stream
-	 * */
+	 * Clears the screen and scrollback by printing ANSI escape codes, so it needs an ANSI-compatible
+	 * console (not Eclipse's). Not every terminal supports clearing scrollback.
+	 *
+	 * @see <a href="https://en.wikipedia.org/wiki/ANSI_escape_code">ANSI escape code</a>
+	 */
 	public static void clearScreen() {
-	    System.out.print("\033[H\033[2J");
+	    System.out.print("\033[H\033[2J\033[3J");
 	    System.out.flush();
 	}
 
