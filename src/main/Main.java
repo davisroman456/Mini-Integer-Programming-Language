@@ -16,7 +16,7 @@ import tokenizer.Tokenizer;
  *  allowing the session to continue until the user issues QUIT or input ends.
  *  
  *  Date started: July 17, 2026. Date of completion: July 20, 2026.
- *  Major Update: November 19, 2026 (Parentheses, Brackets, Exponentiation, and HELP/CLEAR keywords).
+ *  Major Update: November 21, 2026 (Parentheses & Brackets, Exponentiation, and HELP & CLEAR keywords).
  *  @author Roman Davis
  *  @version 2.0
  * */
@@ -55,7 +55,7 @@ public class Main {
 	}
 	
 	/**
-	 * Displays a guide on how to use the program
+	 * Displays a guide on how to use the program.
 	 * */
 	public static void printHelp() {
 		System.out.println("""
